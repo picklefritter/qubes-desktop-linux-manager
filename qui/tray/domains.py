@@ -50,7 +50,6 @@ STATE_DICTIONARY = {
     "domain-shutdown-failed": "Running",
 }
 
-
 class IconCache:
     def __init__(self):
         self.icon_files = {
@@ -65,23 +64,14 @@ class IconCache:
             "debug": "bug-play",
             "logs": "scroll-text",
         }
-        self.icons = {}
 
-    def get_icon(self, icon_name):
-        if icon_name in self.icons:
-            icon = self.icons[icon_name]
-        else:
-            try:
-                icon = Gtk.IconTheme.get_default().load_icon(
-                    self.icon_files[icon_name], 16, Gtk.IconLookupFlags.FORCE_SIZE
-                )
-                self.icons[icon_name] = icon
-            except (TypeError, GLib.Error):
-                icon = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 16, 16)
-                icon.fill(0)
-                self.icons[icon_name] = icon
-        return icon
+        self.images = {}
 
+    def get_image(self, icon_name):
+        icon = self.icon_files.get(icon_name)
+        if not icon:
+            return Gtk.Image()  # empty placeholder
+        return Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.MENU)
 
 def show_error(title, text):
     dialog = Gtk.MessageDialog(None, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK)
@@ -104,7 +94,8 @@ class ActionMenuItem(Gtk.MenuItem, metaclass=ABCGtkMenuItemMeta):
 
         # Add an icon to the menu item, if provided
         if icon_cache and icon_name:
-            img = Gtk.Image.new_from_pixbuf(icon_cache.get_icon(icon_name))
+           img = icon_cache.get_image(icon_name)
+
         if img:
             img.show()
             box.pack_start(img, False, False, 0)

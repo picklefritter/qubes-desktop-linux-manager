@@ -93,36 +93,32 @@ class ActionableWidget:
     async def widget_action(self, *_args):
         """What should happen when this widget is activated/clicked"""
 
-
-### ICONS
 class VariantIcon(Gtk.Image):
     def __init__(self, icon_name, initial_variant: str, size: int):
-        """
-        Initialize a new icon that has a light and dark variants.
-        :param icon_name: base name of the icon, e.g. 'key'
-        :param initial_variant: initial variant, one of 'light' and 'dark'
-        :param size: icon size
-        """
         super().__init__()
+        self.icon_name = icon_name
+        self.size = size
+        self.is_light = (initial_variant == "light")
+        self._apply()
 
-        self.light_icon = load_icon(icon_name + "-light", icon_name, size)
-        self.dark_icon = load_icon(icon_name + "-dark", icon_name, size)
+    def _pick_name(self):
+        # prefer explicit -light/-dark if present, else fallback to base
+        theme = Gtk.IconTheme.get_default()
+        suffix = "-light" if self.is_light else "-dark"
+        candidate = self.icon_name + suffix
+        if theme.has_icon(candidate):
+            return candidate
+        return self.icon_name
 
-        if initial_variant == "light":
-            self.set_from_pixbuf(self.light_icon)
-            self.is_light = True
-        else:
-            self.set_from_pixbuf(self.dark_icon)
-            self.is_light = False
+    def _apply(self):
+        # NOTE: Gtk.IconSize.MENU is fine; GTK handles HiDPI.
+        # If you want to respect the provided `size`, GTK3 doesn't love arbitrary
+        # pixel sizes here, but MENU is still the "correct" menu icon size.
+        self.set_from_icon_name(self._pick_name(), Gtk.IconSize.MENU)
 
     def toggle_icon(self):
-        if self.is_light:
-            self.set_from_pixbuf(self.dark_icon)
-            self.is_light = False
-        else:
-            self.set_from_pixbuf(self.light_icon)
-            self.is_light = True
-
+        self.is_light = not self.is_light
+        self._apply()
 
 class VMWithIcon(Gtk.Box):
     def __init__(

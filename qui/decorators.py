@@ -212,21 +212,15 @@ class DomainDecorator(PropertiesDecorator):
         return cpu_widget
 
     def icon(self) -> Gtk.Image:
-        """Returns a `Gtk.Image` containing the colored lock icon"""
-        if self.vm is None:  # should not be called
-            return None
+        """Returns a Gtk.Image using themed icons (HiDPI-safe)"""
+        if self.vm is None:
+           return None
         try:
-            # this is a temporary, emergency fix for unexecpected conflict with
-            # qui-devices rewrite
-            icon = getattr(self.vm, "icon", self.vm.label.icon)
+           icon_name = getattr(self.vm, "icon", self.vm.label.icon)
         except exc.QubesDaemonCommunicationError:
-            # no permission to access icon
-            icon = "appvm-black"
-        icon_vm = Gtk.IconTheme.get_default().load_icon(
-            icon, 16, Gtk.IconLookupFlags.FORCE_SIZE
-        )
-        icon_img = Gtk.Image.new_from_pixbuf(icon_vm)
-        return icon_img
+           icon_name = "appvm-black"
+
+        return Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.MENU)
 
     def netvm(self) -> Gtk.Label:
         netvm = getattr(self.vm, "netvm", _("permission denied"))
@@ -293,24 +287,16 @@ def device_domain_hbox(vm, attached: bool) -> Gtk.Box:
     hbox.pack_start(name, True, True, 5)
     return hbox
 
-
 def create_icon(name) -> Gtk.Image:
-    """Create an icon from string; tries for both the normal and -symbolic
-    variants, because some themes only have the symbolic variant. If not
-    found, outputs a blank icon."""
+    """Create a themed GTK icon (HiDPI-aware)."""
+    theme = Gtk.IconTheme.get_default()
 
-    names = [name, f"{name}-symbolic"]
-    pixbuf = None
-    for icon_name in names:
-        try:
-            pixbuf = Gtk.IconTheme.get_default().load_icon(
-                icon_name, 16, Gtk.IconLookupFlags.FORCE_SIZE
+    # Prefer symbolic icons when available
+    for icon_name in (f"{name}-symbolic", name):
+        if theme.has_icon(icon_name):
+            return Gtk.Image.new_from_icon_name(
+                icon_name, Gtk.IconSize.MENU
             )
-            break
-        except (TypeError, GLib.Error):
-            continue
-    if not pixbuf:
-        pixbuf = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 16, 16)
-        pixbuf.fill(0x000)
 
-    return Gtk.Image.new_from_pixbuf(pixbuf)
+    # Fallback: empty image, keeps layout intact
+    return Gtk.Image()
